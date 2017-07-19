@@ -626,10 +626,14 @@ class PexSegmenter:
         elif self.src_data is not None:
             raw_img = self.src_data
         print('raw image imported.')
-        # gaussian filter
-        print('performing gaussian filtering...')
-        gaussian_img = gaussian_filter(raw_img, [self.g_z,self.g_xy,self.g_xy])
-        print('Image smoothed.')
+        if self.seg_method == 'pre-thresholded':
+            gaussian_img = raw_img
+        else:
+            # gaussian filter
+            print('performing gaussian filtering...')
+            gaussian_img = gaussian_filter(raw_img,
+                                           [self.g_z, self.g_xy, self.g_xy])
+            print('Image smoothed.')
         print('preprocessing complete.')
         ## SEGMENTATION BY THRESHOLDING THE GAUSSIAN ##
         if self.seg_method == 'threshold':
@@ -802,6 +806,38 @@ class PexSegmenter:
                         self.primary_objs.remove(obj)
                     else:
                         self.parent[obj] = o_parent
+        elif self.seg_method == 'pre-thresholded':
+            threshold_img = np.copy(gaussian_img)
+            if fill_holes:
+                print('filling holes in objects.')
+                for i in range(0, threshold_img.shape[0]):
+                    threshold_img[i, :, :] = binary_fill_holes(
+                        threshold_img[i, :, :])
+                print('holes filled.')
+            dist_map = distance_transform_edt(threshold_img,
+                                              sampling=edt_sampling)
+            print('distance map complete.')
+            print('smoothing distance map...')
+            # smooth the distance map
+            smooth_dist = gaussian_filter(dist_map, edt_smooth)
+            print('distance map smoothed.')
+            print('identifying maxima...')
+            # find local maxima in the smoothed distance map
+            # these will be the watershed seeds
+            max_strel = generate_binary_structure(3, 2)
+            maxima = maximum_filter(smooth_dist,
+                                    footprint=max_strel) == smooth_dist
+            # clean up background and edges
+            bgrd_3d = smooth_dist == 0
+            eroded_bgrd = binary_erosion(bgrd_3d, structure= max_strel,
+                                         border_value=1)
+            maxima = np.logical_xor(maxima, eroded_bgrd)
+            print('maxima identified.')
+            # watershed segmentation
+            labs = self.watershed_labels(maxima)
+            print('watershedding...')
+            peroxisomes = watershed(-smooth_dist, labs, mask=threshold_img)
+            print('watershedding complete.')
         # Sometimes the watershedding algorithm inaccurately separates objects
         # on different Z-slices. The next section merges objects with
         # significant overlap
@@ -856,7 +892,7 @@ class PexSegmenter:
                              gaussian_img, self.seg_method, self.mode,
                              threshold_img, dist_map, smooth_dist, maxima,
                              labs, peroxisomes, obj_nums, volumes,
-                             to_pdout = pdout, mode_params = mode_params)
+                             to_pdout=pdout, mode_params=mode_params)
 
     ## HELPER METHODS ##
     @staticmethod
