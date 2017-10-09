@@ -593,6 +593,8 @@ class PexSegmenter:
         for key, value in kwargs.items():
             setattr(self, key, value)
         if self.seg_method == 'canny':
+            if not self.mode == 'absolute' or self.mode == 'scaled':
+                self.mode = 'absolute'  # if it wasn't set, use absolute
             self.high_threshold = kwargs.get('high_threshold',1000)
             self.low_threshold = kwargs.get('low_threshold',500)
         if self.seg_method == 'threshold':
@@ -607,15 +609,15 @@ class PexSegmenter:
                     raise ValueError('A CellSegmentObj containing segmented cells is required if mode == bg_scaled.')
                 if np.isnan(self.bg_diff):
                     raise ValueError('a bg_diff argument is needed if mode == bg_scaled.')
-    def segment(self, fill_holes = False, edt_sampling = (3,1,1),
-                edt_smooth = [1,3,3]):
-        '''Segment objects within the image according to attributes provided.
+    def segment(self, fill_holes=False, edt_sampling=(3,1,1),
+                edt_smooth=[1,3,3]):
+        """Segment objects within the image according to attributes provided.
 
         Yields: a PexSegmentObj containing segmented objects as well as all
             images generated during segmentation (for post-hoc analysis) as
             well as relevant values, e.g. numbers and names of segmented
             particles. See PexSegmentObj documentation for more details.
-        '''
+        """
         starttime = time.time() # begin timing
         f_directory = os.getcwd()
         pdout = [] # list of PexSegmentObj attributes to pass to pandas for csv
@@ -760,10 +762,17 @@ class PexSegmenter:
             c_strel = generate_binary_structure(2,1)
             # perform canny edge detection on each slice s
             for s in range(0,gaussian_img.shape[0]):
-                c = canny(gaussian_img[s,:,:],
-                          sigma = 0,
-                          low_threshold = self.low_threshold,
-                          high_threshold = self.high_threshold)
+                if self.mode == 'absolute':
+                    c = canny(gaussian_img[s, :, :],
+                              sigma=0,
+                              low_threshold=self.low_threshold,
+                              high_threshold=self.high_threshold)
+                elif self.mode == 'scaled':
+                    c = canny(gaussian_img[s, :, :],
+                              sigma=0,
+                              low_threshold=self.low_threshold,
+                              high_threshold=self.high_threshold,
+                              use_quantiles=True)
                 # clean up object edges that have gaps
                 c = binary_closing(c,c_strel)
                 edge_img[s,:,:] = np.copy(c)
