@@ -803,7 +803,7 @@ class PexSegmenter:
             print('watershedding...')
             peroxisomes = watershed(-smooth_dist, labs, mask = threshold_img)
             print('watershedding complete.')
-            if hasattr(self,'cells'):
+            if hasattr(self, 'cells'):
                 # assign segmented objects to cells if a CellSegmentObj was
                 # included
                 self.primary_objs = [x for x in np.unique(peroxisomes) \
@@ -867,7 +867,7 @@ class PexSegmenter:
                     # object, change obj to that object #
                     if float(ordered_by_ct[-1][1])/cslice[cslice == obj].size>0.5:
                         peroxisomes[s,:,:][cslice == obj] = ordered_by_ct[-1][0]
-        obj_nums, volumes = np.unique(peroxisomes, return_counts = True)
+        obj_nums, volumes = np.unique(peroxisomes, return_counts=True)
         volumes = dict(zip(obj_nums.astype('uint16'), volumes))
         # remove the background
         del volumes[0]
