@@ -1,9 +1,7 @@
-'''Classes and methods for segmenting cells based on cytosolic fluorescence.'''
+"""Classes and methods for segmenting cells based on cytosolic fluorescence."""
 
-## IMPORT DEPENDENCIES
+# IMPORT DEPENDENCIES
 
-import matplotlib
-matplotlib.use('Agg')
 import os
 import sys
 import pickle
@@ -13,15 +11,17 @@ import numpy as np
 from skimage import io
 from skimage.morphology import watershed
 from scipy.ndimage.filters import gaussian_filter, maximum_filter
-from scipy.ndimage.morphology import generate_binary_structure, binary_erosion 
+from scipy.ndimage.morphology import generate_binary_structure, binary_erosion
 from scipy.ndimage.morphology import binary_dilation, binary_fill_holes
 from scipy.ndimage.morphology import distance_transform_edt
 import matplotlib.pyplot as plt
-
+import matplotlib
+matplotlib.use('Agg')
 
 
 class CellSegmentObj:
-    ''' segmentation data from a cytosolic fluorescence image.   
+    """ Segmentation data from a cytosolic fluorescence image.
+
     Attributes:
         filename (str): the filename for the original raw fluroescence
             image.
@@ -54,16 +54,16 @@ class CellSegmentObj:
             done to eliminate "tunnels" that can arise from vacuoles).
         final_cells (ndarray): the product of cleaning up the filled_cells
             segmented image using a voting filter. see the CellSegmenter
-            reassign_pix_obs method for details. 
-    '''
+            reassign_pix_obs method for details.
+    """
 
     def __init__(self, f_directory, filename, raw_img, gaussian_img, threshold,
                  threshold_img, filled_img, dist_map, smooth_dist_map,
                  maxima, labs, watershed_output, filled_cells, final_cells,
                  obj_nums, volumes, segmentation_log):
-        '''initialize the CellSegmentObject with segmentation data.'''
+        """Initialize the CellSegmentObject with segmentation data."""
         self.log = segmentation_log
-        self.log.append('creating CellSegmentObject...')
+        print('creating CellSegmentObject...')
         self.f_directory = f_directory
         self.filename = os.path.basename(filename).lower()
         self.raw_img = raw_img.astype('uint16')
@@ -89,59 +89,59 @@ class CellSegmentObj:
     def __repr__(self):
         return 'CellSegmentObj '+ self.filename
 
-    ## PLOTTING METHODS ##    
+    ## PLOTTING METHODS ##
     def plot_raw_img(self,display = False):
-        self.plot_stack(self.raw_img, colormap = 'gray')
-        if display == True:
+        self.plot_stack(self.raw_img, colormap='gray')
+        if display:
             plt.show()
     def plot_gaussian_img(self, display = False):
         self.plot_stack(self.gaussian_img, colormap = 'gray')
-        if display == True:
+        if display:
             plt.show()
     def plot_threshold_img(self, display = False):
         self.plot_stack(self.threshold_img, colormap = 'gray')
-        if display == True:
+        if display:
             plt.show()
     def plot_filled_img(self, display = False):
         self.plot_stack(self.filled_img, colormap = 'gray')
-        if display == True:
+        if display:
             plt.show()
     def plot_dist_map(self, display = False):
         self.plot_stack(self.dist_map)
-        if display == True:
+        if display:
             plt.show()
     def plot_smooth_dist_map(self, display = False):
         self.plot_stack(self.smooth_dist_map)
-        if display == True:
+        if display:
             plt.show()
     def plot_maxima(self, display = False):
         vis_maxima = binary_dilation(self.maxima,
                                      structure = np.ones(shape = (1,5,5)))
         masked_maxima = np.ma.masked_where(vis_maxima == 0, vis_maxima)
         self.plot_maxima_stack(masked_maxima, self.smooth_dist_map)
-        if display == True:
+        if display:
             plt.show()
     def plot_watershed(self, display = False):
         self.plot_stack(self.watershed_output)
-        if display == True:
+        if display:
             plt.show()
     def plot_filled_cells(self, display = False):
         self.plot_stack(self.filled_cells)
-        if display == True:
+        if display:
             plt.show()
     def plot_final_cells(self, display = False):
         self.plot_stack(self.final_cells)
-        if display == True:
+        if display:
             plt.show()
 
-    ## OUTPUT METHODS ##
-    
+    # OUTPUT METHODS
+
     def to_csv(self, output_dir = None):
         os.chdir(self.f_directory)
         if output_dir == None:
             output_dir = self.f_directory + '/' + self.filename[0:self.filename.index('.tif')]
         if not os.path.isdir(output_dir):
-            self.log.append('creating output directory...')
+            print('creating output directory...')
             os.mkdir(output_dir)
         os.chdir(output_dir)
         for_csv = self.to_pandas()
@@ -153,15 +153,15 @@ class CellSegmentObj:
         if output_dir == None:
             output_dir = self.f_directory + '/' + self.filename[0:self.filename.index('.tif')]
         if not os.path.isdir(output_dir):
-            self.log.append('creating output directory...')
+            print('creating output directory...')
             os.mkdir(output_dir)
         os.chdir(output_dir)
-        self.log.append('writing image' + str(imageattr))
+        print('writing image' + str(imageattr))
         io.imsave(str(imageattr)+self.filename, getattr(self,str(imageattr)))
 
     def output_all_images(self, output_dir = None):
         '''Write all images to a new subdirectory.
-        
+
         Write all images associated with the CellSegmentObj to a new
         directory. Name that directory according to the filename of the initial
         image that the object was derived from. This new directory should be a
@@ -171,10 +171,10 @@ class CellSegmentObj:
         if output_dir == None:
             output_dir = self.f_directory + '/' + self.filename[0:self.filename.index('.tif')]
         if not os.path.isdir(output_dir):
-            self.log.append('creating output directory...')
+            print('creating output directory...')
             os.mkdir(output_dir)
         os.chdir(output_dir)
-        self.log.append('writing images...')
+        print('writing images...')
         io.imsave('raw_'+self.filename, self.raw_img)
         io.imsave('gaussian_'+self.filename, self.gaussian_img)
         io.imsave('threshold_'+self.filename, self.threshold_img)
@@ -187,7 +187,7 @@ class CellSegmentObj:
         io.imsave('final_cells_'+self.filename, self.final_cells)
     def output_plots(self):
         '''Write PDFs of slice-by-slice plots.
-        
+
         Output: PDF plots of each image within CellSegmentObj in a directory
         named for the original filename they were generated from. Plots are
         generated using the plot_stack method and plotting methods defined
@@ -196,12 +196,12 @@ class CellSegmentObj:
         os.chdir(self.f_directory)
         if not os.path.isdir(self.f_directory + '/' +
                              self.filename[0:self.filename.index('.tif')]):
-            self.log.append('creating output directory...')
+            print('creating output directory...')
             os.mkdir(self.f_directory + '/' +
                      self.filename[0:self.filename.index('.tif')])
         os.chdir(self.f_directory + '/' +
                  self.filename[0:self.filename.index('.tif')])
-        self.log.append('saving plots...')
+        print('saving plots...')
         self.plot_raw_img()
         plt.savefig('praw_'+self.filename[0:self.filename.index('.tif')]+'.pdf')
         self.plot_gaussian_img()
@@ -217,7 +217,7 @@ class CellSegmentObj:
         plt.savefig('pdist_' +
                     self.filename[0:self.filename.index('.tif')]+'.pdf')
         self.plot_smooth_dist_map()
-        plt.savefig('psmooth_dist_' + 
+        plt.savefig('psmooth_dist_' +
                     self.filename[0:self.filename.index('.tif')]+'.pdf')
         self.plot_maxima()
         plt.savefig('pmaxima_' +
@@ -236,11 +236,11 @@ class CellSegmentObj:
         if output_dir == None:
             output_dir = self.f_directory + '/' + self.filename[0:self.filename.index('.tif')]
         if not os.path.isdir(output_dir):
-            self.log.append('creating output directory...')
+            print('creating output directory...')
             os.mkdir(output_dir)
         os.chdir(output_dir)
         with open('pickled_' +
-                    self.filename[0:self.filename.index('.tif')] + 
+                    self.filename[0:self.filename.index('.tif')] +
                   '.pickle', 'wb') as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
         f.close()
@@ -252,17 +252,17 @@ class CellSegmentObj:
                      self.filename[0:self.filename.index('.tif')])
         os.chdir(self.f_directory + '/' +
                  self.filename[0:self.filename.index('.tif')])
-        self.log.append('outputting all data...')
+        print('outputting all data...')
         self.output_plots()
         self.output_all_images()
         self.mk_log_file('log_'+self.filename[0:self.filename.index('.tif')]+'.txt')
         self.pickle()
-         # TODO: UPDATE THIS METHOD TO INCLUDE PANDAS OUTPUT           
+         # TODO: UPDATE THIS METHOD TO INCLUDE PANDAS OUTPUT
     ## HELPER METHODS ##
 
     def to_pandas(self):
         '''create a pandas DataFrame of tabulated numeric data.
-        
+
         the pdout attribute indicates which variables to include in the
         DataFrame.
         '''
@@ -290,16 +290,16 @@ class CellSegmentObj:
         conv_factor = z*x*x
         for key, val in self.volumes:
             self.volumes[key] = float(self.volumes[key])*conv_factor
-        self.volumes_flag = 'femtoliters' 
+        self.volumes_flag = 'femtoliters'
 
     def plot_stack(self, stack_arr, colormap='jet'):
         ''' Create a matplotlib plot with each subplot containing a slice.
-        
+
         Keyword arguments:
         stack_arr: a numpy ndarray containing pixel intensity values.
         colormap: the colormap to be used when displaying pixel
                   intensities. defaults to jet.
-        
+
         Output: a pyplot object in which each slice from the image array
                 is represented in a subplot. subplots are 4 columns
                 across (when 4 or more slices are present) with rows to
@@ -319,7 +319,7 @@ class CellSegmentObj:
                 axarr[i].xaxis.set_visible(False)
                 axarr[i].yaxis.set_visible(False)
             f.set_figwidth(16)
-            f.set_figheight(4)        
+            f.set_figheight(4)
             f.show() # TODO: IMPLEMENT OPTIONAL SAVING OF THE PLOT
 
         else:
@@ -389,7 +389,7 @@ class CellSegmentObj:
         kwargs:
             fname: filename to write to.
             '''
-        self.log.append('making log file...')
+        print('making log file...')
         with open(fname, 'w') as f:
             for s in self.log:
                 f.write(s + '\n')
@@ -421,69 +421,68 @@ class CellSegmentObj:
         return self
 
 class CellSegmenter:
-    
+
     def __init__(self, filename, threshold):
-        self.log = []
         self.filename = filename
         self.threshold = threshold
 
     def segment(self):
-        ## start timing
+        # start timing
         starttime = time.time()
-        ## DATA IMPORT AND PREPROCESSING
+        # DATA IMPORT AND PREPROCESSING
         f_directory = os.getcwd()
-        self.log.append('reading ' + self.filename + ' ...')
+        print('reading ' + self.filename + ' ...')
         raw_img = io.imread(self.filename)
-        self.log.append('raw image imported.')
+        print('raw image imported.')
         # next step's gaussian filter assumes 100x obj and 0.2 um slices
-        self.log.append('performing gaussian filtering...')
-        gaussian_img = gaussian_filter(input = raw_img, sigma = (1,2,2))
-        self.log.append('cytosolic image smoothed.')
-        self.log.append('preprocessing complete.')
-        ## BINARY THRESHOLDING AND IMAGE CLEANUP
-        self.log.append('thresholding...')
+        print('performing gaussian filtering...')
+        gaussian_img = gaussian_filter(input=raw_img, sigma=(1, 2, 2))
+        print('cytosolic image smoothed.')
+        print('preprocessing complete.')
+        # BINARY THRESHOLDING AND IMAGE CLEANUP
+        print('thresholding...')
         threshold_img = np.copy(gaussian_img)
         threshold_img[threshold_img < self.threshold] = 0
         threshold_img[threshold_img > 0] = 1
-        self.log.append('thresholding complete.')
-        self.log.append('filling holes...')
+        print('thresholding complete.')
+        print('filling holes...')
         filled_img = binary_fill_holes(threshold_img)
-        self.log.append('3d holes filled.')
-        self.log.append('binary processing complete.')
-        ## DISTANCE AND MAXIMA TRANFORMATIONS TO FIND CELLS
+        print('3d holes filled.')
+        print('binary processing complete.')
+        # DISTANCE AND MAXIMA TRANFORMATIONS TO FIND CELLS
         # next two steps assume 100x obj and 0.2 um slices
-        self.log.append('generating distance map...')
-        dist_map = distance_transform_edt(filled_img, sampling = (2,1,1))
-        self.log.append('distance map complete.')
-        self.log.append('smoothing distance map...')
-        smooth_dist = gaussian_filter(dist_map, [2,4,4])
-        self.log.append('distance map smoothed.')
-        self.log.append('identifying maxima...')
-        max_strel_3d = generate_binary_structure(3,2)
+        print('generating distance map...')
+        dist_map = distance_transform_edt(filled_img, sampling=(2, 1, 1))
+        print('distance map complete.')
+        print('smoothing distance map...')
+        smooth_dist = gaussian_filter(dist_map, [2, 4, 4])
+        print('distance map smoothed.')
+        print('identifying maxima...')
+        max_strel_3d = generate_binary_structure(3, 2)
         maxima = maximum_filter(smooth_dist,
-                                footprint = max_strel_3d) == smooth_dist
+                                footprint=max_strel_3d) == smooth_dist
         # clean up background/edges
         bgrd_3d = smooth_dist == 0
-        eroded_background_3d = binary_erosion(bgrd_3d, structure = max_strel_3d,
-                                              border_value = 1)
+        eroded_background_3d = binary_erosion(bgrd_3d, structure=max_strel_3d,
+                                              border_value=1)
         maxima = np.logical_xor(maxima, eroded_background_3d)
-        self.log.append('maxima identified.')
-        ## WATERSHED SEGMENTATION
+        print('maxima identified.')
+        # WATERSHED SEGMENTATION
         labs = self.watershed_labels(maxima)
-        self.log.append('watershedding...')
-        cells = watershed(-smooth_dist,labs,mask = filled_img)
-        self.log.append('raw watershedding complete.')
-        self.log.append('filling 2d holes in cells...')
+        print('watershedding...')
+        cells = watershed(-smooth_dist, labs, mask=filled_img)
+        print('raw watershedding complete.')
+        print('filling 2d holes in cells...')
         filled_cells = self.fill_cells_2d(cells)
-        self.log.append('2d hole-filling complete.')
-        self.log.append('cleaning up cells...')
+        print('2d hole-filling complete.')
+        print('cleaning up cells...')
         clean_cells = self.reassign_pixels_3d(filled_cells)
-        self.log.append('cell cleanup complete.')
-        self.log.append('SEGMENTATION OPERATION COMPLETE.')
+        print('cell cleanup complete.')
+        print('SEGMENTATION OPERATION COMPLETE.')
         endtime = time.time()
         runningtime = endtime - starttime
-        self.log.append('time elapsed: ' + str(runningtime) + ' seconds')
-        cell_nums, volumes = np.unique(clean_cells, return_counts = True)
+        print('time elapsed: ' + str(runningtime) + ' seconds')
+        cell_nums, volumes = np.unique(clean_cells, return_counts=True)
         cell_nums.astype('uint16')
         volumes.astype('uint16')
         volumes = dict(zip(cell_nums, volumes))
@@ -492,27 +491,27 @@ class CellSegmenter:
         return CellSegmentObj(f_directory, self.filename, raw_img,
                               gaussian_img, self.threshold,
                               threshold_img, filled_img, dist_map,
-                              smooth_dist, maxima, labs, cells, filled_cells, 
+                              smooth_dist, maxima, labs, cells, filled_cells,
                               clean_cells, cell_nums, volumes, self.log)
 
 
     def watershed_labels(self, maxima_img):
         '''Takes a boolean array with maxima labeled as true pixels
         and returns an array with maxima numbered sequentially.'''
-        
+
         max_z, max_y, max_x = np.nonzero(maxima_img)
-        
+
         label_output = np.zeros(maxima_img.shape)
-        
+
         for i in range(0,len(max_y)):
             label_output[max_z[i],max_y[i],max_x[i]] = i+1
-        
+
         return(label_output)
 
 
 
     def fill_cells_2d(self, cell_img):
-        '''Go cell-by-cell in a watershed-segmented image. 
+        '''Go cell-by-cell in a watershed-segmented image.
         First, make a new 3D array that just includes that cell; then,
         fill holes within that cell in each 2D plane. Then add this cell
         back into a new 3D array with the same numbering scheme that the
@@ -530,7 +529,7 @@ class CellSegmenter:
             for z in range(0,nplanes):
                 c_cell[z,:,:] = binary_fill_holes(c_cell[z,:,:])
             filled_cells[c_cell == 1] = i
-            self.log.append('cell ' + str(i) + ' of ' 
+            print('cell ' + str(i) + ' of '
                             + str(ncells-1) + ' done.')
         return filled_cells
 
@@ -541,18 +540,18 @@ class CellSegmenter:
 
         reassigned_cells = np.ndarray(shape = filled_cells.shape)
         for i in range(0,filled_cells.shape[0]):
-            self.log.append('    beginning slice ' + str(i) + '...')
+            print('    beginning slice ' + str(i) + '...')
             reassigned_cells[i,:,:] = self.reassign_pixels_2d(filled_cells[i,:,:])
-            self.log.append('    slice ' + str(i) + ' complete.')
+            print('    slice ' + str(i) + ' complete.')
         return reassigned_cells
 
     def reassign_pixels_2d(self, watershed_img_2d):
-        '''In 2D, go over each segmented pixel in the image with a 
-        structuring element. Measure the frequency of each different 
-        pixel value that occurs within this structuring element (i.e. 1 
-        for one segmented cell, 2 for another, etc. etc.). Generate a 
-        new image with each pixel value set to that of the most common 
-        non-zero (non-background) pixel within its proximity. After 
+        '''In 2D, go over each segmented pixel in the image with a
+        structuring element. Measure the frequency of each different
+        pixel value that occurs within this structuring element (i.e. 1
+        for one segmented cell, 2 for another, etc. etc.). Generate a
+        new image with each pixel value set to that of the most common
+        non-zero (non-background) pixel within its proximity. After
         doing this for every pixel, check and see if the new image is
         identical to the old one. If it is, stop; if not, repeat with
         the new image as the starting image.'''
@@ -576,7 +575,7 @@ class CellSegmenter:
             for i in range(0,len(mask_y)):
                 y = mask_y[i]
                 x = mask_x[i]
-                # shift submatrix if the pixel is too close to the edge to be 
+                # shift submatrix if the pixel is too close to the edge to be
                 # centered within it
                 if y-3 < 0:
                     y = 3
@@ -589,22 +588,22 @@ class CellSegmenter:
                 # take a strel-sized matrix around the pixel of interest.
                 a = old_img[y-3:y+4,x-3:x+4]
                 # mask for the pixels that I'm interested in comparing to
-                svals = np.multiply(a,strel) 
+                svals = np.multiply(a,strel)
                 # convert this to a 1D array with zeros removed
                 cellvals = svals.flatten()[np.nonzero(
-                        svals.flatten())].astype(int) 
-                # count number of pixels that correspond to each 
+                        svals.flatten())].astype(int)
+                # count number of pixels that correspond to each
                 # cell in proximity
                 freq = np.bincount(cellvals,minlength=ncells)
                 # find cell with most abundant pixels in vicinity
                 top_cell = np.argmax(freq)
                 # because argmax only returns the first index if there are
-                # multiple matches, I need to check for duplicates. if 
-                # there are duplicates, I'm going to leave the value as the 
-                # original, regardless of whether the set of most abundant 
-                # pixel values contain the original pixel (likely on an 
+                # multiple matches, I need to check for duplicates. if
+                # there are duplicates, I'm going to leave the value as the
+                # original, regardless of whether the set of most abundant
+                # pixel values contain the original pixel (likely on an
                 # edge) or not (likely on a point where three cells come
-                # together - this is far less common)    
+                # together - this is far less common)
                 if np.sum(freq==freq[top_cell]) > 1:
                     new_img[mask_y[i],mask_x[i]] = old_img[mask_y[i],mask_x[i]]
                 else:
@@ -615,7 +614,7 @@ class CellSegmenter:
             else:
                 old_img = np.copy(new_img)
             counter += 1
-        self.log.append('    number of iterations = ' + str(counter))
+        print('    number of iterations = ' + str(counter))
         return new_img
 
 
@@ -631,15 +630,15 @@ if __name__ == '__main__':
     wd_contents = os.listdir(os.getcwd())
     imlist = []
     for f in wd_contents:
-        if (f.endswith('.tif') or f.endswith('.tiff') 
+        if (f.endswith('.tif') or f.endswith('.tiff')
             or f.endswith('.TIF') or f.endswith('.TIFF')):
             imlist.append(f)
-    self.log.append('final imlist:')
-    self.log.append(imlist)
+    print('final imlist:')
+    print(imlist)
     for i in imlist:
-        self.log.append('initializing segmenter object...')
+        print('initializing segmenter object...')
         i_parser = CellSegmenter(i,threshold)
-        self.log.append('initializing segmentation...')
+        print('initializing segmentation...')
         i_obj = i_parser.segment()
         i_obj.output_all()
 
