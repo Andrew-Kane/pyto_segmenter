@@ -60,9 +60,8 @@ class CellSegmentObj:
     def __init__(self, f_directory, filename, raw_img, gaussian_img, threshold,
                  threshold_img, filled_img, dist_map, smooth_dist_map,
                  maxima, labs, watershed_output, filled_cells, final_cells,
-                 obj_nums, volumes, segmentation_log):
+                 obj_nums, volumes):
         """Initialize the CellSegmentObject with segmentation data."""
-        self.log = segmentation_log
         print('creating CellSegmentObject...')
         self.f_directory = f_directory
         self.filename = os.path.basename(filename).lower()
@@ -255,7 +254,6 @@ class CellSegmentObj:
         print('outputting all data...')
         self.output_plots()
         self.output_all_images()
-        self.mk_log_file('log_'+self.filename[0:self.filename.index('.tif')]+'.txt')
         self.pickle()
          # TODO: UPDATE THIS METHOD TO INCLUDE PANDAS OUTPUT
     ## HELPER METHODS ##
@@ -384,20 +382,6 @@ class CellSegmentObj:
             f.set_figwidth(16)
             f.set_figheight(4*np.ceil(nimgs/4))
             f.show() # TODO: IMPLEMENT OPTIONAL SAVING OF THE PLOT
-    def mk_log_file(self, fname):
-        '''Write the log file list to a text file.
-        kwargs:
-            fname: filename to write to.
-            '''
-        print('making log file...')
-        with open(fname, 'w') as f:
-            for s in self.log:
-                f.write(s + '\n')
-            f.write('number of slices: ' + str(self.slices) + '\n')
-            f.write('width: ' + str(self.width) + '\n')
-            f.write('height: ' + str(self.height) + '\n')
-            f.write('binary threshold: ' + str(self.threshold) + '\n')
-            f.close()
 
     ## RESTRUCTURING METHODS ##
     def slim(self):
@@ -492,7 +476,7 @@ class CellSegmenter:
                               gaussian_img, self.threshold,
                               threshold_img, filled_img, dist_map,
                               smooth_dist, maxima, labs, cells, filled_cells,
-                              clean_cells, cell_nums, volumes, self.log)
+                              clean_cells, cell_nums, volumes)
 
 
     def watershed_labels(self, maxima_img):
