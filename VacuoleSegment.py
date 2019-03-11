@@ -448,7 +448,8 @@ class CellSegmenter:
         # clean up background/edges
         bgrd_3d = smooth_dist == 0
         eroded_background_3d = binary_erosion(bgrd_3d, structure=max_strel_3d,
-                                              border_value=3)
+                                              iterations=3,
+                                              border_value=1)
         maxima = np.logical_xor(maxima, eroded_background_3d)
         print('maxima identified.')
         # WATERSHED SEGMENTATION
