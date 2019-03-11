@@ -448,7 +448,7 @@ class CellSegmenter:
         # clean up background/edges
         bgrd_3d = smooth_dist == 0
         eroded_background_3d = binary_erosion(bgrd_3d, structure=max_strel_3d,
-                                              iterations=3,
+                                              iterations=2,
                                               border_value=1)
         maxima = np.logical_xor(maxima, eroded_background_3d)
         print('maxima identified.')
